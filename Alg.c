@@ -1,5 +1,40 @@
 #include "Var_str.c"
 
+Coord *define_coord_by_dest(int x, int y, int dest_id)
+{
+    //  1 2 3
+    //  4 0 5
+    //  6 7 8
+
+    Coord *coord = malloc(sizeof(Coord));
+    coord->x = x;
+    coord->y = y;
+
+    switch (dest_id){
+        case 1: case 2: case 3:{
+            coord->y = y - 1;
+            break;
+        }
+        case 6: case 7: case 8: {
+            coord->y = y + 1;
+            break;
+        }
+    }
+
+    switch (dest_id) {
+        case 1: case 4: case 6: {
+            coord->x = x - 1;
+            break;
+        }
+        case 3: case 5: case 8: {
+            coord->x = x + 1;
+            break;
+        }
+    }
+    return coord;
+}
+
+
 int check_coord(Map *m, int x, int y)
 {
     if (x < 0 || y < 0 || x > m->len - m->flight_size || y > m->heigh - m->flight_size)
@@ -30,9 +65,9 @@ int define_dest_id_by_coord_change(int x0, int y0, int x1, int y1)
     int dx = x1 - x0;
     int dy = y1 - y0;
 
-    if (dx == -1)
+    if (dy == -1)
     {
-        switch (dy)
+        switch (dx)
         {
         case -1:
             return 1;
@@ -42,9 +77,9 @@ int define_dest_id_by_coord_change(int x0, int y0, int x1, int y1)
             return 3;
         }
     }
-    else if (dx == 0)
+    else if (dy == 0)
     {
-        switch (dy)
+        switch (dx)
         {
         case -1:
             return 4;
@@ -54,9 +89,9 @@ int define_dest_id_by_coord_change(int x0, int y0, int x1, int y1)
             return 5;
         }
     }
-    else if (dx == 1)
+    else if (dy == 1)
     {
-        switch (dy)
+        switch (dx)
         {
         case -1:
             return 6;
@@ -172,7 +207,6 @@ void gen_step(Map *m, int x, int y, int a_to_b)
                 }
                 if (point_is_changed)
                 {
-
                     if (go_to_cell->steps_from_a != -1 && go_to_cell->steps_from_b != -1)
                     { // go_to_cell->to_a_step_dest != 0 && go_to_cell->to_b_step_dest != 0 &&
                         coord = make_coord(go_to_cell, a_to_b);
@@ -189,7 +223,7 @@ void gen_step(Map *m, int x, int y, int a_to_b)
     }
 }
 
-int gen_rout(Map *map)
+void gen_rout(Map *map)
 {
     CoordQueue *queue;
     gen_step(map, map->a_x, map->a_y, 1);
@@ -197,17 +231,47 @@ int gen_rout(Map *map)
     gen_step(map, map->b_x, map->b_y, 0);
 
     Coord *coord;
-    while (is_empty(map->found_coords))
-    { //  while (!is_empty(map->last_viewed_coords)){ - такой заголовок цикла, чтобы найти все пути и сохранить в переменную
-
+    while (!is_empty(map->last_viewed_coords)) // while (is_empty(map->found_coords)) - такой заголовок цикла, чтобы найти только кратчайший 
+    { 
         coord = pop_elem(map->last_viewed_coords);
-        // printf("%d %d\n", coord->x, coord->y);
         gen_step(map, coord->x, coord->y, coord->a_to_b);
     }
+}
 
+void fill_in_way_points(Map* map, Coord* coord, int x0, int y0, int a_to_b){
+    int prev_x = 0;
+    int prev_y = 0;
+
+    int prev_2_x = 0;
+    int prev_2_y = 0;
+
+    while (coord->x != x0 || coord->y != y0){
+        if (prev_2_x == coord->x && prev_2_y == coord->y)
+            break;
+        prev_2_x = prev_x;
+        prev_2_y = prev_y;
+        prev_x = coord->x;
+        prev_y = coord->y;
+        MapCell *cell;
+        cell = get_cell(map, coord->x, coord->y);
+        cell->is_on_way = 1;
+        if (a_to_b)
+            coord = define_coord_by_dest(coord->x, coord->y, cell->to_a_step_dest);
+        else
+            coord = define_coord_by_dest(coord->x, coord->y, cell->to_b_step_dest);
+    }
+}
+
+int fill_in_shortest_way_points(Map* map){
+    Coord* coord;
     coord = get_first_elem(map->found_coords);
     printf("x:%d y:%d len:%d\n", coord->x, coord->y, coord->path_len);
+
+    fill_in_way_points(map, coord, map->a_x, map->a_y, 1);
+    fill_in_way_points(map, coord, map->b_x, map->b_y, 0);
 }
+
+
 
 int main()
 {
@@ -215,130 +279,21 @@ int main()
     Map *map = read_map();
     printf("%d %d\n", map->len, map->heigh);
 
-    printf("showing_map...\n\n");
-    show_map(map);
-    printf("%d %d\n", map->len, map->heigh);
-
     printf("initing_map_data...\n");
     init_data_for_calculation(map, 0, 0, map->len - 1, map->heigh - 1);
 
-    printf("genering_step...\n");
-    gen_step(map, map->a_x, map->a_y, 1);
-
-    printf("\n");
-    Coord *c;
-    MapCell *cell;
-    for (int i = 0; i < 3; i++)
-    {
-        c = pop_elem(map->last_viewed_coords);
-        cell = get_cell(map, c->x, c->y);
-        printf("x: %d y: %d step: %d steps: %d len: %d\n", c->x, c->y, c->to_a_step, cell->steps_from_a);
-    }
-    printf("\n\n");
+    map->flight_size = 2;
 
     gen_rout(map);
+
+    fill_in_shortest_way_points(map);
+
+    show_map(map);
 }
 
-// Coord *define_coord_by_dest(int x, int y, int dest_id)
-// {
-//     //  1 2 3
-//     //  4 0 5
-//     //  6 7 8
 
-//     Coord *coord = malloc(sizeof(Coord));
-//     coord->x = x;
-//     coord->y = y;
 
-//     switch (dest_id)
-//     {
-//     case 1:
-//     case 2:
-//     case 3:
-//     {
-//         coord->y = y - 1;
-//         break;
-//     }
-//     case 6:
-//     case 7:
-//     case 8:
-//     {
-//         coord->y = y + 1;
-//         break;
-//     }
-//     }
 
-//     switch (dest_id)
-//     {
-//     case 1:
-//     case 4:
-//     case 6:
-//     {
-//         coord->x = x - 1;
-//         break;
-//     }
-//     case 3:
-//     case 5:
-//     case 8:
-//     {
-//         coord->x = x + 1;
-//         break;
-//     }
-//     }
-//     return coord;
-// }
-
-// int* sort_destinations(Map *map, int x, int y, int a_to_b)
-// {
-//     int tmp;
-//     MapCell *c;
-//     Coord *coord;
-
-//     int dest_ids[8];
-//     int way_lens[8];
-//     int i = 0;
-
-//     for (int dest = 1; dest <= 8; dest++)
-//     {
-//         coord = define_coord_by_dest(x, y, dest);
-//         if (check_coord(map, coord) == 1)
-//         {
-//             dest_ids[i] = dest;
-//             c = get_cell(map, coord->x, coord->y);
-//             if (a_to_b)
-//             {
-//                 way_lens[i] = c->min_b_way_len;
-//             }
-//             else
-//             {
-//                 way_lens[i] = c->min_a_way_len;
-//             }
-//         }
-//         else
-//         {
-//             dest_ids[i] = 0;
-//             way_lens[i] = -1;
-//         }
-//         i++;
-//     }
-
-//     for (int _ = 0; _ < 8; _++)
-//     {
-//         for (int i = 0; i < 8 - 1; i++)
-//         {
-//             if (way_lens[i] > way_lens[i + 1])
-//             {
-//                 tmp = dest_ids[i];
-//                 dest_ids[i] = dest_ids[i + 1];
-//                 dest_ids[i + 1] = tmp;
-
-//                 tmp = way_lens[i];
-//                 way_lens[i] = way_lens[i + 1];
-//                 way_lens[i + 1] = tmp;
-//             }
-//         }
-//     }
-//     return dest_ids;
-// }
 
 // void tie_to_tail(const Coord *curr_elem, Coord *curr_continue)
 // {

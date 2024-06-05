@@ -143,6 +143,8 @@ typedef struct MapCell
     int is_free;
     int can_draw;
 
+    int is_on_way; // using to save on way_coords and show map with way
+
     int steps_from_a;   // how many steps we need for come from a to this point
     int steps_from_b;   // how many steps we need for come from b to this point
     int to_a_step_dest; // num from 1 to 8
@@ -194,6 +196,7 @@ MapCell *MapCell_new(int xx)
     cell->x = xx;
     cell->is_free = 1;
     cell->can_draw = 1;
+    cell->is_on_way = 0;
     return cell;
 }
 
@@ -463,7 +466,10 @@ void show_map(Map *map)
         while (curr_cell != NULL)
         {
             if (curr_cell->is_free)
-                printf(" ");
+                if (curr_cell->is_on_way)
+                    printf("#");
+                else
+                    printf(" ");
             else
                 printf(".");
             curr_cell = curr_cell->next_cell;
