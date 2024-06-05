@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <Var_str.h>
-#include <Gen_file.h>
+// #include <stdio.h>
+#include "Var_str.h"
+#include "Gen_file.h"
 
 
 int main() {
