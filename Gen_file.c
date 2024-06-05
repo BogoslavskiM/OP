@@ -26,7 +26,7 @@ int main()
 {
     Map *my_map = gen_map_call();
 
-    Map *my_read_map = read_map();
+    // Map *my_read_map = read_map();
 
-    show_map(my_read_map);
+    // show_map(my_read_map);
 }

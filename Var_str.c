@@ -114,26 +114,26 @@ Coord *get_min_item(CoordQueue *queue)
     return curr_min;
 }
 
-void add_elem_to_que(CoordQueue *queue, struct Coord *elem)
+void add_elem_to_que(CoordQueue *queue, Coord *elem)
 {
+    elem->next = NULL;
+    printf("start_adding\n");
     if (queue->head == NULL)
     {
-        queue->head = *(&elem);
-        queue->head->next = NULL;
-        queue->tail = NULL;
-    }
-    else if (queue->head->next == NULL)
-    {
-        elem->next = NULL;
+        printf("add_ekem 1\n");
+        queue->head = elem;
         queue->tail = elem;
-        queue->head->next = queue->tail;
+        printf("add_ekem 2\n");
     }
     else
     {
+        printf("add_ekem 3\n");
         queue->tail->next = elem;
+        printf("add_ekem 4\n");
         queue->tail = queue->tail->next;
-        queue->tail->next = NULL;
+        printf("add_ekem 5\n");
     }
+    printf("elem_added\n");
 }
 
 typedef struct MapCell
@@ -184,7 +184,6 @@ typedef struct Map
 
     int flight_size;
 
-    struct CoordQueue *viewed_coords;
     struct CoordQueue *last_viewed_coords;
     struct CoordQueue *found_coords;
 
